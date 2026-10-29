@@ -1,0 +1,27 @@
+[project]
+name = "uk-flight-grid"
+version = "0.1.0"
+description = "Builds an aggregated UK overflight exposure grid from the adsb.lol historical archive (ODbL)."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "numpy>=2.1",
+    "orjson>=3.10",
+    "polars>=1.12",
+    "pyarrow>=18.0",
+    "h3>=4.1,<5",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+]
+
+[tool.uv]
+# Flat modules at the repo root, run as scripts; nothing to install.
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

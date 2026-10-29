@@ -1,0 +1,20 @@
+# Extracted outputs and raw archive data (never commit)
+out/
+raw/
+data/raw/
+*.tar
+*.tar.a?
+*.tar.gz
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Local env / secrets
+.env
+.env.*
+
+.DS_Store
