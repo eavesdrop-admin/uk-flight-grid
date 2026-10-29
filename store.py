@@ -40,7 +40,7 @@ def missing_env(env: dict[str, str] | None = None) -> list[str]:
 
 
 def bucket_name() -> str:
-    return os.environ.get("FLIGHT_GRID_S3_BUCKET", DEFAULT_BUCKET)
+    return os.environ.get("FLIGHT_GRID_S3_BUCKET") or DEFAULT_BUCKET  # unset optional secrets arrive as ""
 
 
 def client() -> Any:
@@ -54,7 +54,7 @@ def client() -> Any:
         endpoint_url=os.environ["FLIGHT_GRID_S3_ENDPOINT"],
         aws_access_key_id=os.environ["FLIGHT_GRID_S3_ACCESS_KEY_ID"],
         aws_secret_access_key=os.environ["FLIGHT_GRID_S3_SECRET_ACCESS_KEY"],
-        region_name=os.environ.get("FLIGHT_GRID_S3_REGION", DEFAULT_REGION),
+        region_name=os.environ.get("FLIGHT_GRID_S3_REGION") or DEFAULT_REGION,
     )
 
 

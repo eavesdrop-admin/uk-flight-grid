@@ -69,3 +69,10 @@ def test_merge_manifests_re_evaluates_degraded_days_across_all_days(tmp_path):
     m = merge(tmp_path)
     assert m["days"]["2026-09-09"]["status"] == "degraded"
     assert m["days"]["2026-09-08"]["status"] == "ok"
+
+
+def test_blank_optional_secrets_fall_back_to_defaults(monkeypatch):
+    monkeypatch.setenv("FLIGHT_GRID_S3_BUCKET", "")
+    assert store.bucket_name() == "flight-grid"
+    monkeypatch.setenv("FLIGHT_GRID_S3_BUCKET", "other")
+    assert store.bucket_name() == "other"
