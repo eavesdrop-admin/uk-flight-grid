@@ -1,0 +1,12 @@
+{
+  "source": "DfT Aviation Statistics AVI0102b (air transport movements at full reporting airports by airport)",
+  "source_url": "https://assets.publishing.service.gov.uk/media/6936e30870840a535475d42b/avi0102.ods",
+  "landing_page": "https://www.gov.uk/government/statistical-data-sets/aviation-statistics-data-tables-avi",
+  "licence": "OGL-v3.0",
+  "attribution": "Contains public sector information licensed under the Open Government Licence v3.0",
+  "data_year": 2024,
+  "publication_date": "2025-12",
+  "retrieval_timestamp": "2026-10-29T00:00:00Z",
+  "count": 43,
+  "note": "Annual air transport movements (landings + take-offs) per UK full reporting airport in 2024, from DfT table AVI0102b (published as thousands to 3 decimal places; multiplied by 1,000 and rounded to an exact count). Air transport movements only: excludes non-ATM activity such as general aviation, positioning, training and air-taxi operations, and excludes the Channel Islands and Isle of Man (not in AVI0102). Airports with no reported traffic in the year are omitted. Airport reference-point coordinates and codes are not in AVI0102: carried from the previous bundle or looked up in OurAirports (public domain). Regenerate each December with scripts/build_dft_avi0102.py."
+}

@@ -1,0 +1,12 @@
+Vendored reference data
+
+data/dft-aviation/avi0102.json (+ .metadata.json)
+  DfT Aviation Statistics, table AVI0102b, air transport movements by UK full
+  reporting airport, 2024. Contains public sector information licensed under
+  the Open Government Licence v3.0.
+  https://www.gov.uk/government/statistical-data-sets/aviation-statistics-data-tables-avi
+  Air transport movements only; excludes the Channel Islands and Isle of Man.
+
+tests/fixtures/airports_trim.csv, tests/fixtures/runways_trim.csv
+  Rows extracted unchanged from OurAirports (public domain), for offline tests.
+  https://ourairports.com/data/

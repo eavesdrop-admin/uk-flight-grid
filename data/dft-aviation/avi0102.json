@@ -1,0 +1,389 @@
+[
+  {
+    "name": "Heathrow",
+    "iata": "LHR",
+    "icao": "EGLL",
+    "lat": 51.47,
+    "lng": -0.4543,
+    "annual_movements": 473799,
+    "data_year": 2024
+  },
+  {
+    "name": "Gatwick",
+    "iata": "LGW",
+    "icao": "EGKK",
+    "lat": 51.1481,
+    "lng": -0.1903,
+    "annual_movements": 261522,
+    "data_year": 2024
+  },
+  {
+    "name": "Manchester",
+    "iata": "MAN",
+    "icao": "EGCC",
+    "lat": 53.3537,
+    "lng": -2.275,
+    "annual_movements": 188116,
+    "data_year": 2024
+  },
+  {
+    "name": "Stansted",
+    "iata": "STN",
+    "icao": "EGSS",
+    "lat": 51.885,
+    "lng": 0.235,
+    "annual_movements": 187505,
+    "data_year": 2024
+  },
+  {
+    "name": "Edinburgh",
+    "iata": "EDI",
+    "icao": "EGPH",
+    "lat": 55.95,
+    "lng": -3.3725,
+    "annual_movements": 115302,
+    "data_year": 2024
+  },
+  {
+    "name": "Luton",
+    "iata": "LTN",
+    "icao": "EGGW",
+    "lat": 51.8747,
+    "lng": -0.3683,
+    "annual_movements": 101998,
+    "data_year": 2024
+  },
+  {
+    "name": "Birmingham",
+    "iata": "BHX",
+    "icao": "EGBB",
+    "lat": 52.4539,
+    "lng": -1.748,
+    "annual_movements": 87472,
+    "data_year": 2024
+  },
+  {
+    "name": "Bristol",
+    "iata": "BRS",
+    "icao": "EGGD",
+    "lat": 51.3827,
+    "lng": -2.7191,
+    "annual_movements": 70661,
+    "data_year": 2024
+  },
+  {
+    "name": "Glasgow",
+    "iata": "GLA",
+    "icao": "EGPF",
+    "lat": 55.8719,
+    "lng": -4.4331,
+    "annual_movements": 66177,
+    "data_year": 2024
+  },
+  {
+    "name": "Aberdeen",
+    "iata": "ABZ",
+    "icao": "EGPD",
+    "lat": 57.2019,
+    "lng": -2.1978,
+    "annual_movements": 59031,
+    "data_year": 2024
+  },
+  {
+    "name": "Belfast International",
+    "iata": "BFS",
+    "icao": "EGAA",
+    "lat": 54.6575,
+    "lng": -6.2158,
+    "annual_movements": 51649,
+    "data_year": 2024
+  },
+  {
+    "name": "London City",
+    "iata": "LCY",
+    "icao": "EGLC",
+    "lat": 51.5053,
+    "lng": 0.0553,
+    "annual_movements": 47357,
+    "data_year": 2024
+  },
+  {
+    "name": "East Midlands",
+    "iata": "EMA",
+    "icao": "EGNX",
+    "lat": 52.8311,
+    "lng": -1.3281,
+    "annual_movements": 45295,
+    "data_year": 2024
+  },
+  {
+    "name": "Newcastle",
+    "iata": "NCL",
+    "icao": "EGNT",
+    "lat": 55.0375,
+    "lng": -1.6917,
+    "annual_movements": 36831,
+    "data_year": 2024
+  },
+  {
+    "name": "Liverpool John Lennon",
+    "iata": "LPL",
+    "icao": "EGGP",
+    "lat": 53.3336,
+    "lng": -2.8497,
+    "annual_movements": 35272,
+    "data_year": 2024
+  },
+  {
+    "name": "Leeds Bradford",
+    "iata": "LBA",
+    "icao": "EGNM",
+    "lat": 53.8659,
+    "lng": -1.6606,
+    "annual_movements": 30509,
+    "data_year": 2024
+  },
+  {
+    "name": "Belfast City",
+    "iata": "BHD",
+    "icao": "EGAC",
+    "lat": 54.6181,
+    "lng": -5.8725,
+    "annual_movements": 29363,
+    "data_year": 2024
+  },
+  {
+    "name": "Southampton",
+    "iata": "SOU",
+    "icao": "EGHI",
+    "lat": 50.9503,
+    "lng": -1.3568,
+    "annual_movements": 16722,
+    "data_year": 2024
+  },
+  {
+    "name": "Norwich",
+    "iata": "NWI",
+    "icao": "EGSH",
+    "lat": 52.6758,
+    "lng": 1.2828,
+    "annual_movements": 13212,
+    "data_year": 2024
+  },
+  {
+    "name": "Sumburgh",
+    "iata": "LSI",
+    "icao": "EGPB",
+    "lat": 59.8789,
+    "lng": -1.2956,
+    "annual_movements": 12914,
+    "data_year": 2024
+  },
+  {
+    "name": "Inverness",
+    "iata": "INV",
+    "icao": "EGPE",
+    "lat": 57.5425,
+    "lng": -4.0475,
+    "annual_movements": 10107,
+    "data_year": 2024
+  },
+  {
+    "name": "Kirkwall",
+    "iata": "KOI",
+    "icao": "EGPA",
+    "lat": 58.9579,
+    "lng": -2.9051,
+    "annual_movements": 9507,
+    "data_year": 2024
+  },
+  {
+    "name": "Bournemouth",
+    "iata": "BOH",
+    "icao": "EGHH",
+    "lat": 50.78,
+    "lng": -1.8425,
+    "annual_movements": 7196,
+    "data_year": 2024
+  },
+  {
+    "name": "Cardiff",
+    "iata": "CWL",
+    "icao": "EGFF",
+    "lat": 51.3967,
+    "lng": -3.3433,
+    "annual_movements": 7044,
+    "data_year": 2024
+  },
+  {
+    "name": "Exeter",
+    "iata": "EXT",
+    "icao": "EGTE",
+    "lat": 50.7344,
+    "lng": -3.4139,
+    "annual_movements": 6050,
+    "data_year": 2024
+  },
+  {
+    "name": "Newquay",
+    "iata": "NQY",
+    "icao": "EGHQ",
+    "lat": 50.4406,
+    "lng": -4.9954,
+    "annual_movements": 5337,
+    "data_year": 2024
+  },
+  {
+    "name": "Stornoway",
+    "iata": "SYY",
+    "icao": "EGPO",
+    "lat": 58.2156,
+    "lng": -6.3311,
+    "annual_movements": 4973,
+    "data_year": 2024
+  },
+  {
+    "name": "Humberside",
+    "iata": "HUY",
+    "icao": "EGNJ",
+    "lat": 53.5762,
+    "lng": -0.3495,
+    "annual_movements": 4833,
+    "data_year": 2024
+  },
+  {
+    "name": "Blackpool",
+    "iata": "BLK",
+    "icao": "EGNH",
+    "lat": 53.7717,
+    "lng": -3.0286,
+    "annual_movements": 4644,
+    "data_year": 2024
+  },
+  {
+    "name": "Glasgow Prestwick",
+    "iata": "PIK",
+    "icao": "EGPK",
+    "lat": 55.5094,
+    "lng": -4.5867,
+    "annual_movements": 3859,
+    "data_year": 2024
+  },
+  {
+    "name": "Teesside",
+    "iata": "MME",
+    "icao": "EGNV",
+    "lat": 54.5092,
+    "lng": -1.4294,
+    "annual_movements": 3405,
+    "data_year": 2024
+  },
+  {
+    "name": "City of Derry",
+    "iata": "LDY",
+    "icao": "EGAE",
+    "lat": 55.0428,
+    "lng": -7.1611,
+    "annual_movements": 3019,
+    "data_year": 2024
+  },
+  {
+    "name": "Southend",
+    "iata": "SEN",
+    "icao": "EGMC",
+    "lat": 51.5714,
+    "lng": 0.6956,
+    "annual_movements": 1985,
+    "data_year": 2024
+  },
+  {
+    "name": "Benbecula",
+    "iata": "BEB",
+    "icao": "EGPL",
+    "lat": 57.4811,
+    "lng": -7.3628,
+    "annual_movements": 1904,
+    "data_year": 2024
+  },
+  {
+    "name": "Dundee",
+    "iata": "DND",
+    "icao": "EGPN",
+    "lat": 56.4525,
+    "lng": -3.0258,
+    "annual_movements": 1435,
+    "data_year": 2024
+  },
+  {
+    "name": "Tiree",
+    "iata": "TRE",
+    "icao": "EGPU",
+    "lat": 56.4992,
+    "lng": -6.8692,
+    "annual_movements": 1403,
+    "data_year": 2024
+  },
+  {
+    "name": "Barra",
+    "iata": "BRR",
+    "icao": "EGPR",
+    "lat": 57.0228,
+    "lng": -7.4431,
+    "annual_movements": 1168,
+    "data_year": 2024
+  },
+  {
+    "name": "Biggin Hill",
+    "iata": "BQH",
+    "icao": "EGKB",
+    "lat": 51.3308,
+    "lng": 0.0325,
+    "annual_movements": 1139,
+    "data_year": 2024
+  },
+  {
+    "name": "Islay",
+    "iata": "ILY",
+    "icao": "EGPI",
+    "lat": 55.6827,
+    "lng": -6.2575,
+    "annual_movements": 1121,
+    "data_year": 2024
+  },
+  {
+    "name": "Campbeltown",
+    "iata": "CAL",
+    "icao": "EGEC",
+    "lat": 55.4372,
+    "lng": -5.6864,
+    "annual_movements": 942,
+    "data_year": 2024
+  },
+  {
+    "name": "Wick John O'Groats",
+    "iata": "WIC",
+    "icao": "EGPC",
+    "lat": 58.4589,
+    "lng": -3.0931,
+    "annual_movements": 928,
+    "data_year": 2024
+  },
+  {
+    "name": "Lerwick Tingwall",
+    "iata": "LWK",
+    "icao": "EGET",
+    "lat": 60.1922,
+    "lng": -1.2436,
+    "annual_movements": 784,
+    "data_year": 2024
+  },
+  {
+    "name": "Oxford",
+    "iata": "OXF",
+    "icao": "EGTK",
+    "lat": 51.8369,
+    "lng": -1.32,
+    "annual_movements": 1,
+    "data_year": 2024
+  }
+]
