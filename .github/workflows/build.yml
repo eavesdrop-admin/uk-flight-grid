@@ -1,0 +1,107 @@
+# Stage B and validation, from extracts already in the PRIVATE bucket (run extract.yml first).
+#
+#   mode pilot: build one full month and its stride-N subset, write the sampling check.
+#   mode grid:  build the 12-month sample, validate, publish to the private bucket.
+#
+# Outputs go to the bucket only: grid/<window_end>/ if validation passed (the Eavesdrop loader
+# reads the newest there), grid-failed/<window_end>/ if not. No artifacts, no release assets.
+# The log is public, so validate_grid runs with --summary-only.
+name: build
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "pilot = sampled-vs-full check on one month; grid = build + validate + publish"
+        type: choice
+        options: [pilot, grid]
+        default: grid
+      month:
+        description: "YYYY-MM. pilot: the month to build in full. grid: the month whose passing sampling check is required (stride > 1)"
+        type: string
+        default: ""
+      stride:
+        description: "Sample every Nth day (4 is the production default)"
+        type: string
+        default: "4"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      MODE: ${{ inputs.mode }}
+      MONTH: ${{ inputs.month }}
+      STRIDE: ${{ inputs.stride }}
+      FLIGHT_GRID_S3_ENDPOINT: ${{ secrets.FLIGHT_GRID_S3_ENDPOINT }}
+      FLIGHT_GRID_S3_ACCESS_KEY_ID: ${{ secrets.FLIGHT_GRID_S3_ACCESS_KEY_ID }}
+      FLIGHT_GRID_S3_SECRET_ACCESS_KEY: ${{ secrets.FLIGHT_GRID_S3_SECRET_ACCESS_KEY }}
+      FLIGHT_GRID_S3_REGION: ${{ secrets.FLIGHT_GRID_S3_REGION }}
+      FLIGHT_GRID_S3_BUCKET: ${{ secrets.FLIGHT_GRID_S3_BUCKET }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.13"
+      - run: uv sync --frozen
+      - name: Storage secrets present
+        run: uv run python store.py check
+      - name: Fetch extracts
+        run: |
+          set -euo pipefail
+          if [ "$MODE" = pilot ]; then
+            days=$(python3 plan_days.py pilot --month "$MONTH" --lines)
+          else
+            days=$(python3 plan_days.py sampled --stride "$STRIDE" --lines)
+          fi
+          # shellcheck disable=SC2086
+          uv run python store.py get-days out/extract $days
+          uv run python merge_manifests.py out/extract/manifests out/days_manifest.json
+
+      - name: Pilot, sampled vs full
+        if: inputs.mode == 'pilot'
+        run: |
+          set +e
+          uv run python sample_check.py --month "$MONTH" --stride "$STRIDE" --extract-dir out/extract --work out/pilot
+          status=$?
+          # Upload pass or fail: validate_grid refuses a failing check, and the record is useful either way.
+          uv run python store.py put out/pilot/sampling_check.json "pilot/${MONTH}/sampling_check.json"
+          exit $status
+
+      - name: Build grid
+        if: inputs.mode == 'grid'
+        run: uv run python build_grid.py --extract-dir out/extract --out out/grid --cache out/agg --day-stride "$STRIDE" --workers 4
+      - name: Fetch the pilot sampling check
+        if: inputs.mode == 'grid' && inputs.stride != '1'
+        run: uv run python store.py get "pilot/${MONTH}/sampling_check.json" out/pilot/sampling_check.json || echo "no pilot check found for ${MONTH}; validation will fail the sampling gate"
+      - name: Validate
+        id: validate
+        if: inputs.mode == 'grid'
+        run: |
+          set +e
+          grid=$(ls -d out/grid/*/ | tail -1)
+          grid=${grid%/}
+          args=(--extract-dir out/extract --summary-only)
+          [ -f out/pilot/sampling_check.json ] && args+=(--sampling-check out/pilot/sampling_check.json)
+          uv run python validate_grid.py "$grid" "${args[@]}"
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+          echo "window_end=$(basename "$grid")" >> "$GITHUB_OUTPUT"
+          echo "dir=$grid" >> "$GITHUB_OUTPUT"
+      - name: Publish to private storage
+        if: inputs.mode == 'grid'
+        env:
+          STATUS: ${{ steps.validate.outputs.status }}
+          WINDOW_END: ${{ steps.validate.outputs.window_end }}
+          DIR: ${{ steps.validate.outputs.dir }}
+        run: |
+          if [ "$STATUS" = 0 ]; then prefix="grid/${WINDOW_END}"; else prefix="grid-failed/${WINDOW_END}"; fi
+          uv run python store.py put-dir "$DIR" "$prefix" > /dev/null
+          echo "published to the private bucket under ${prefix}/"
+          [ "$STATUS" = 0 ]

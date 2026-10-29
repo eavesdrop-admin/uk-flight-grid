@@ -1,0 +1,113 @@
+# Stage A at scale: one job per UTC day, each streaming that day's adsb.lol archive and writing
+# the day's Parquet to the PRIVATE storage bucket. Nothing derived is attached to the run
+# (no artifacts, no release assets) because the public repo's logs and artifacts are public.
+#
+# Run it by hand: Actions > extract > Run workflow. No schedule and no pull_request trigger,
+# so the storage secrets are never exposed to forks.
+name: extract
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "sampled = every Nth day of the last 12 complete months; pilot = every day of one month; dates = explicit list"
+        type: choice
+        options: [sampled, pilot, dates]
+        default: sampled
+      month:
+        description: "pilot only: YYYY-MM (a complete month inside the window, e.g. the latest one)"
+        type: string
+        default: ""
+      dates:
+        description: "dates only: comma-separated YYYY-MM-DD"
+        type: string
+        default: ""
+      stride:
+        description: "sampled only: take every Nth day (4 is the production default)"
+        type: string
+        default: "4"
+      max_parallel:
+        description: "Concurrent day jobs. 6 is the plan's cap so the GitHub release CDN is not throttled"
+        type: string
+        default: "6"
+      force:
+        description: "Re-extract days that are already in the bucket"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: extract
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      days: ${{ steps.plan.outputs.days }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: plan
+        env:
+          MODE: ${{ inputs.mode }}
+          MONTH: ${{ inputs.month }}
+          DATES: ${{ inputs.dates }}
+          STRIDE: ${{ inputs.stride }}
+        run: |
+          set -euo pipefail
+          case "$MODE" in
+            sampled) days=$(python3 plan_days.py sampled --stride "$STRIDE") ;;
+            pilot)   days=$(python3 plan_days.py pilot --month "$MONTH") ;;
+            dates)   days=$(python3 plan_days.py dates "$DATES") ;;
+          esac
+          echo "days=$days" >> "$GITHUB_OUTPUT"
+          echo "$days" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)), "days to consider")'
+
+  extract:
+    needs: plan
+    runs-on: ubuntu-latest # 4 vCPU, 16 GB on public repos
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false # one unavailable day must not cancel the rest
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix:
+        day: ${{ fromJSON(needs.plan.outputs.days) }}
+    env:
+      DAY: ${{ matrix.day }}
+      FLIGHT_GRID_S3_ENDPOINT: ${{ secrets.FLIGHT_GRID_S3_ENDPOINT }}
+      FLIGHT_GRID_S3_ACCESS_KEY_ID: ${{ secrets.FLIGHT_GRID_S3_ACCESS_KEY_ID }}
+      FLIGHT_GRID_S3_SECRET_ACCESS_KEY: ${{ secrets.FLIGHT_GRID_S3_SECRET_ACCESS_KEY }}
+      FLIGHT_GRID_S3_REGION: ${{ secrets.FLIGHT_GRID_S3_REGION }}
+      FLIGHT_GRID_S3_BUCKET: ${{ secrets.FLIGHT_GRID_S3_BUCKET }}
+      GITHUB_TOKEN: ${{ github.token }} # release discovery rate limit
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.13"
+      - run: uv sync --frozen
+      - name: Storage secrets present
+        run: uv run python store.py check
+      - name: Already extracted?
+        id: have
+        env:
+          FORCE: ${{ inputs.force }}
+        run: |
+          if [ "$FORCE" != "true" ] && uv run python store.py exists "extract/${DAY:0:4}/${DAY}.parquet"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "$DAY is already in the bucket"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Extract
+        if: steps.have.outputs.skip != 'true'
+        run: uv run python extract_day.py --date "$DAY" --out out --workers 4
+      - name: Upload to private storage
+        if: steps.have.outputs.skip != 'true'
+        # Manifest first, Parquet last: the Parquet key existing means the day is complete.
+        run: |
+          uv run python store.py put out/days_manifest.json "extract/manifests/${DAY}.json"
+          uv run python store.py put "out/extract/${DAY:0:4}/${DAY}.parquet" "extract/${DAY:0:4}/${DAY}.parquet"

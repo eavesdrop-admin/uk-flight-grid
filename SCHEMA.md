@@ -99,4 +99,4 @@ Everything in the plan's `flight_grid_meta` table: `build_id`, `window_start`, `
    of closest approach to the cell centre.
 9. Per-day aggregates are cached in `<cache>/v<BUILDER_VERSION>/<date>/*.parquet` (a directory of
    six files with a `key.json`) rather than one file per day.
-10. `validation.json` is not written here; that is the validation harness.
+10. `validation.json` is not written by `build_grid.py`; `validate_grid.py` writes it (keys `passed`, `status`, `sampling_check_passed`, `checks`, `failures`, `skipped`, `deferred`).

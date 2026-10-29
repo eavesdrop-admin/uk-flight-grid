@@ -11,6 +11,7 @@ dependencies = [
     "polars>=1.12",
     "pyarrow>=18.0",
     "h3>=4.1,<5",
+    "boto3>=1.43.121",
 ]
 
 [dependency-groups]

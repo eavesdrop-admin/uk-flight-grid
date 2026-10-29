@@ -77,3 +77,53 @@ bytes, aircraft and point counts, and an `ok`/`degraded` status against the trai
 `tests/make_fixtures.py` regenerates `tests/fixtures/traces_<date>.json`, about 20 anonymised
 real traces covering the awkward cases (ground points, stale points, helicopters, military,
 barometric-only altitude, MLAT points, aircraft that never enter the UK).
+
+## Validation, pilot and the full build
+
+```bash
+uv run python sample_check.py --month 2026-09          # full month vs every-4th-day subset -> out/pilot/sampling_check.json
+uv run python validate_grid.py out/grid/<window_end> --sampling-check out/pilot/sampling_check.json --extract-dir out/extract
+```
+
+`validate_grid.py` runs the plan's section 8 checks and writes `validation.json` next to the
+grid; it exits 1 if any gate fails. Gates: the day-count gate for the stride; the golden points
+in `golden_points.json` (Heathrow 27L/27R/09L, Gatwick 26L, Manchester 23R, Bristol 27/09,
+Cardiff 12 and quiet and poor-coverage rural controls, all on runway centrelines rather than
+outcode centroids); capture ratio against DfT 2024 for the 15 busiest England and Wales
+airports (0.90 to 1.35); coverage invariants; barometric altitude share under 20%; and, for a
+sampled build, a passing sampled-vs-full pilot check made with the same builder version and
+stride. `sample_check.py` requires every golden point with traffic, and 90% of the 1,000
+busiest cells, to agree within 10% on `oh_day_mean`. Not done here, and listed under
+`deferred` in `validation.json`: the Spearman check against DEFRA Lden and the prod-versus-staging
+replica check, which need data this repo does not hold.
+
+Sampled days are those whose date ordinal is divisible by the stride (`plan_days.py`), so the
+pilot month's sample is part of the production sample and nothing is extracted twice.
+
+### Where outputs go
+
+Extracts and grids are derived from an ODbL database and, for the grid, are not published
+(the method is; see the licence note above). So nothing the pipeline produces is attached to a
+GitHub run, release or artifact: the workflows write to a private S3-compatible bucket
+(`store.py`), and `run_local.sh` keeps everything under `out/`. The workflow logs are public, so
+they carry counts and pass/fail only (`validate_grid.py --summary-only`).
+
+Bucket layout: `extract/<YYYY>/<date>.parquet`, `extract/manifests/<date>.json`,
+`grid/<window_end>/` (validated builds; the Eavesdrop loader reads the newest),
+`grid-failed/<window_end>/` (builds that failed validation, never loaded),
+`pilot/<YYYY-MM>/sampling_check.json`.
+
+Repository secrets (Settings, Secrets and variables, Actions): `FLIGHT_GRID_S3_ENDPOINT`,
+`FLIGHT_GRID_S3_ACCESS_KEY_ID`, `FLIGHT_GRID_S3_SECRET_ACCESS_KEY`, and optionally
+`FLIGHT_GRID_S3_REGION` (default `eu-west-2`) and `FLIGHT_GRID_S3_BUCKET` (default `flight-grid`).
+The workflows run on `workflow_dispatch` only, so the secrets are never available to forks.
+
+### Workflows
+
+1. `extract` with mode `pilot`, month = the latest complete month.
+2. `extract` with mode `sampled` (about 91 days; the pilot month's share is skipped as already present).
+3. `build` with mode `pilot`, same month: writes the sampling check.
+4. `build` with mode `grid`, same month: builds the 12-month sample, validates, publishes.
+
+The same steps on a laptop: `./run_local.sh extract pilot 2026-09`, `./run_local.sh extract sampled`,
+`./run_local.sh pilot 2026-09`, `./run_local.sh grid`, then `./run_local.sh upload` if the secrets are set.

@@ -1,0 +1,305 @@
+{
+  "_comment": "Golden points for validate_grid.py (plan section 8). Airport points sit on the extended runway centreline (cross-track error recorded in 'basis'), not on outcode centroids, which fall between glidepaths. Postcode coordinates are from postcodes.io (ONS Postcode Directory); where no postcode centroid lay within 100 m of the centreline the ideal centreline point is used and 'postcode' is null. Expectation keys: top1_airport, top1_op, top1_runway (string or list), oh_day_mean_min/max, oh_alt_p50_ft [lo, hi] (feet AMSL), days_active_frac [lo, hi] (oh_days_active / days_observed), coverage_in (allowed res-7 status; a missing coverage row counts as insufficient), no_airport_attribution (top1_airport must be null or the cell absent), not_good_unless_floor_le (a 'good' cell must have floor_ft at or below this). Points under the minor-wind end of a runway (Bristol 09, Cardiff 12) only assert the airport and A or D: the opposite end's departures share that ground track, so the top operation flips with the prevailing wind. top1_op and top1_runway accept a string or a list., cell_may_be_absent. Thresholds are provisional until the pilot month has run; widen or tighten them from that output, never from a single day. 'centreline' names the runway end whose extended centreline the point sits on; tests/test_validate_grid.py checks the geometry against the reference data.",
+  "points": [
+    {
+      "name": "Hounslow TW3 3LX, 4 km out on EGLL 27L",
+      "postcode": "TW3 3LX",
+      "lat": 51.465204,
+      "lon": -0.377428,
+      "basis": "EGLL 27L centreline, 3.9 km from threshold, 8 m cross-track",
+      "expect": {
+        "top1_airport": "EGLL",
+        "top1_op": "A",
+        "top1_runway": "27L",
+        "oh_day_mean_min": 20,
+        "oh_alt_p50_ft": [
+          450,
+          1400
+        ],
+        "days_active_frac": [
+          0.45,
+          0.95
+        ],
+        "coverage_in": [
+          "good",
+          "partial_low_altitude"
+        ]
+      },
+      "centreline": {
+        "airport": "EGLL",
+        "runway": "27L"
+      }
+    },
+    {
+      "name": "Isleworth TW3 2NU, 6 km out on EGLL 27L",
+      "postcode": "TW3 2NU",
+      "lat": 51.46526,
+      "lon": -0.348662,
+      "basis": "EGLL 27L centreline, 5.9 km from threshold, 4 m cross-track",
+      "expect": {
+        "top1_airport": "EGLL",
+        "top1_op": "A",
+        "top1_runway": "27L",
+        "oh_day_mean_min": 20,
+        "oh_alt_p50_ft": [
+          800,
+          1700
+        ],
+        "days_active_frac": [
+          0.45,
+          0.95
+        ],
+        "coverage_in": [
+          "good",
+          "partial_low_altitude"
+        ]
+      },
+      "centreline": {
+        "airport": "EGLL",
+        "runway": "27L"
+      }
+    },
+    {
+      "name": "Cranford TW5 0BA, 4 km out on EGLL 27R",
+      "postcode": "TW5 0BA",
+      "lat": 51.477824,
+      "lon": -0.375742,
+      "basis": "EGLL 27R centreline, 4.0 km from threshold, 4 m cross-track",
+      "expect": {
+        "top1_airport": "EGLL",
+        "top1_op": "A",
+        "top1_runway": "27R",
+        "oh_day_mean_min": 20,
+        "oh_alt_p50_ft": [
+          450,
+          1400
+        ],
+        "days_active_frac": [
+          0.45,
+          0.95
+        ],
+        "coverage_in": [
+          "good",
+          "partial_low_altitude"
+        ]
+      },
+      "centreline": {
+        "airport": "EGLL",
+        "runway": "27R"
+      }
+    },
+    {
+      "name": "Isleworth TW7 4HT, 6 km out on EGLL 27R",
+      "postcode": "TW7 4HT",
+      "lat": 51.477896,
+      "lon": -0.346852,
+      "basis": "EGLL 27R centreline, 6.0 km from threshold, 6 m cross-track",
+      "expect": {
+        "top1_airport": "EGLL",
+        "top1_op": "A",
+        "top1_runway": "27R",
+        "oh_day_mean_min": 20,
+        "oh_alt_p50_ft": [
+          800,
+          1700
+        ],
+        "days_active_frac": [
+          0.45,
+          0.95
+        ],
+        "coverage_in": [
+          "good",
+          "partial_low_altitude"
+        ]
+      },
+      "centreline": {
+        "airport": "EGLL",
+        "runway": "27R"
+      }
+    },
+    {
+      "name": "Slough SL3 9JD, 5.8 km out on EGLL 09L",
+      "postcode": "SL3 9JD",
+      "lat": 51.477462,
+      "lon": -0.568736,
+      "basis": "EGLL 09L centreline, 5.8 km from threshold, 29 m cross-track",
+      "expect": {
+        "top1_airport": "EGLL",
+        "top1_op": "A",
+        "oh_day_mean_min": 5,
+        "oh_alt_p50_ft": [
+          800,
+          1700
+        ],
+        "coverage_in": [
+          "good",
+          "partial_low_altitude"
+        ]
+      },
+      "centreline": {
+        "airport": "EGLL",
+        "runway": "09L"
+      }
+    },
+    {
+      "name": "Horley, 4 km out on EGKK 26L",
+      "postcode": null,
+      "lat": 51.15837,
+      "lon": -0.11594,
+      "basis": "EGKK 26L ideal centreline point, 4.0 km from threshold (no postcode centroid within 100 m)",
+      "expect": {
+        "top1_airport": "EGKK",
+        "top1_op": "A",
+        "top1_runway": "26L",
+        "oh_day_mean_min": 15,
+        "oh_alt_p50_ft": [
+          450,
+          1400
+        ],
+        "coverage_in": [
+          "good",
+          "partial_low_altitude"
+        ]
+      },
+      "centreline": {
+        "airport": "EGKK",
+        "runway": "26L"
+      }
+    },
+    {
+      "name": "Heald Green SK8 1HR, 4.3 km out on EGCC 23R",
+      "postcode": "SK8 1HR",
+      "lat": 53.385535,
+      "lon": -2.209513,
+      "basis": "EGCC 23R centreline, 4.3 km from threshold, 1 m cross-track",
+      "expect": {
+        "top1_airport": "EGCC",
+        "top1_op": "A",
+        "top1_runway": "23R",
+        "oh_day_mean_min": 10,
+        "oh_alt_p50_ft": [
+          450,
+          1500
+        ],
+        "coverage_in": [
+          "good",
+          "partial_low_altitude"
+        ]
+      },
+      "centreline": {
+        "airport": "EGCC",
+        "runway": "23R"
+      }
+    },
+    {
+      "name": "Bristol BS40 8AB, 3.1 km out on EGGD 27",
+      "postcode": "BS40 8AB",
+      "lat": 51.38458,
+      "lon": -2.662495,
+      "basis": "EGGD 27 centreline, 3.1 km from threshold, 26 m cross-track",
+      "expect": {
+        "top1_airport": "EGGD",
+        "top1_op": "A",
+        "top1_runway": "27",
+        "oh_day_mean_min": 5,
+        "oh_alt_p50_ft": [
+          300,
+          1200
+        ],
+        "coverage_in": [
+          "good",
+          "partial_low_altitude"
+        ]
+      },
+      "centreline": {
+        "airport": "EGGD",
+        "runway": "27"
+      }
+    },
+    {
+      "name": "Bristol BS49 5AE, 5.2 km out on EGGD 09",
+      "postcode": "BS49 5AE",
+      "lat": 51.379326,
+      "lon": -2.807716,
+      "basis": "EGGD 09 centreline, 5.2 km from threshold, 8 m cross-track",
+      "expect": {
+        "top1_airport": "EGGD",
+        "top1_op": [
+          "A",
+          "D"
+        ],
+        "oh_day_mean_min": 3,
+        "coverage_in": [
+          "good",
+          "partial_low_altitude"
+        ]
+      },
+      "centreline": {
+        "airport": "EGGD",
+        "runway": "09"
+      }
+    },
+    {
+      "name": "Rhoose CF62 4QH, 4.9 km out on EGFF 12 (Wales)",
+      "postcode": "CF62 4QH",
+      "lat": 51.420876,
+      "lon": -3.417859,
+      "basis": "EGFF 12 centreline, 4.9 km from threshold, 67 m cross-track",
+      "expect": {
+        "top1_airport": "EGFF",
+        "top1_op": [
+          "A",
+          "D"
+        ],
+        "oh_day_mean_min": 1,
+        "coverage_in": [
+          "good",
+          "partial_low_altitude"
+        ]
+      },
+      "centreline": {
+        "airport": "EGFF",
+        "runway": "12"
+      }
+    },
+    {
+      "name": "Control: Chipping Campden GL55 6AA (quiet, well covered)",
+      "postcode": "GL55 6AA",
+      "lat": 52.053137,
+      "lon": -1.781164,
+      "basis": "Rural Cotswolds, more than 30 km from any airport with scheduled traffic",
+      "expect": {
+        "no_airport_attribution": true,
+        "oh_day_mean_max": 10,
+        "cell_may_be_absent": true,
+        "coverage_in": [
+          "good"
+        ]
+      }
+    },
+    {
+      "name": "Control: Llanidloes SY18 6AA (receiver gap, mid-Wales)",
+      "postcode": "SY18 6AA",
+      "lat": 52.449233,
+      "lon": -3.540755,
+      "basis": "Mid-Wales upland; low-level receiver coverage expected to be poor",
+      "expect": {
+        "no_airport_attribution": true,
+        "cell_may_be_absent": true,
+        "not_good_unless_floor_le": 1500
+      }
+    },
+    {
+      "name": "Control: Exford TA24 7PG (receiver gap, Exmoor)",
+      "postcode": "TA24 7PG",
+      "lat": 51.135449,
+      "lon": -3.596229,
+      "basis": "Exmoor; low-level receiver coverage expected to be poor",
+      "expect": {
+        "no_airport_attribution": true,
+        "cell_may_be_absent": true,
+        "not_good_unless_floor_le": 1500
+      }
+    }
+  ]
+}
