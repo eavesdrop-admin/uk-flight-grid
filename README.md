@@ -27,8 +27,10 @@ run, held in memory and never written, so the same aircraft cannot be linked acr
 1. **Stage A, `extract_day.py`** (this stage): streams one day's tar from GitHub, skips the
    `heatmap/` and `acas/` entries with HTTP Range requests (about a quarter of the bytes),
    decodes `traces/*.json.gz` in worker processes, and writes one Parquet file per UTC day.
-2. Later stages: segment tracks into legs, attribute them to airports and runways,
-   rasterise to H3 and aggregate.
+2. **Stage B, `build_grid.py`**: segments tracks into legs (`segment.py`), attributes them to
+   airports and runways (`attribute.py`, `reference.py`), rasterises to H3 res 9 (`rasterise.py`),
+   aggregates per day and merges across days (`aggregate.py`), and judges receiver coverage
+   (`coverage.py`). Output tables are described in [SCHEMA.md](SCHEMA.md).
 
 ### What Stage A keeps
 
@@ -59,7 +61,14 @@ uv sync
 uv run python extract_day.py --date 2026-10-27 --out out     # about 6 minutes, 3 GB over the wire
 uv run python extract_day.py --date 2026-10-27 --tar day.tar.aa day.tar.ab   # from local parts
 uv run pytest
+uv run python build_grid.py --extract-dir out/extract --out out/grid   # about a minute for three days
+uv run python sanity.py out/grid/<window_end>                         # what the grid says about named places
 ```
+
+`build_grid.py` caches each day under `out/agg/v<BUILDER_VERSION>/`; the cache is reused while the
+extract file, the reference data and `BUILDER_VERSION` are unchanged. Bump `BUILDER_VERSION` in
+`build_grid.py` whenever a change can alter any output number. OurAirports files are downloaded once
+into `data/raw/ourairports/`.
 
 Output: `out/extract/<year>/<date>.parquet` and `out/days_manifest.json` (release used,
 bytes, aircraft and point counts, and an `ok`/`degraded` status against the trailing
