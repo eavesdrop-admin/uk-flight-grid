@@ -30,7 +30,7 @@ import polars as pl
 from h3.api import basic_int as h3i
 
 import coverage as cov
-from aggregate import DayAgg, aggregate_day, merge_days
+from aggregate import DayAgg, aggregate_day, merge_frames
 from attribute import attribute_aircraft
 from grid_schema import (
     AIRPORTS_SCHEMA,
@@ -202,9 +202,9 @@ def write_day_cache(d: Path, key: dict, agg: DayAgg, cday: cov.CoverageDay, move
     tmp.rename(d)
 
 
-def read_day_cache(d: Path) -> tuple[DayAgg, cov.CoverageDay, pl.DataFrame]:
-    r = lambda n: pl.read_parquet(d / f"{n}.parquet")  # noqa: E731
-    return DayAgg(r("cells"), r("alt"), r("attrib")), cov.CoverageDay(r("cov_stats"), r("cov_hist")), r("moves")
+def scan_day_caches(dirs: list[Path], name: str) -> list[pl.LazyFrame]:
+    """Lazy scans of one cached table across days; the cell tables are too big to hold all at once."""
+    return [pl.scan_parquet(d / f"{name}.parquet") for d in dirs]
 
 
 def _worker(extract_path: str, cache_dir: str, ref_dir: str, key: dict) -> tuple[str, float]:
@@ -232,7 +232,7 @@ def build_airports(moves: pl.DataFrame, ref: Reference, n_days: int) -> pl.DataF
         total = resolved["n"].sum() if resolved.height else 0
         top = []
         if total:
-            g = resolved.group_by("runway", "op").agg(pl.col("n").sum()).sort(["n", "runway"], descending=[True, False]).head(6)
+            g = resolved.group_by("runway", "op").agg(pl.col("n").sum()).sort(["n", "runway", "op"], descending=[True, False, False]).head(6)
             top = [{"runway": r, "op": o, "share": round(n / total, 3)} for r, o, n in g.iter_rows()]
         rows.append(
             {
@@ -321,13 +321,16 @@ def build(
                 name, secs = _worker(str(used[d]), str(day_cache_dir(cache_dir, d)), str(ref_dir), keys[d])
                 log(f"  {name}: {secs:.0f}s")
 
-    loaded = [read_day_cache(day_cache_dir(cache_dir, d)) for d in names]
+    dirs = [day_cache_dir(cache_dir, d) for d in names]
     n_days = len(names)
 
     t0 = time.time()
-    cells = merge_days([x[0] for x in loaded])
-    coverage = cov.finalise([x[1] for x in loaded], min_sample_points=min_sample_points)
-    moves = pl.concat([x[2] for x in loaded]).group_by("airport", "runway", "op", "large").agg(pl.col("n").sum())
+    cells = merge_frames(scan_day_caches(dirs, "cells"), scan_day_caches(dirs, "alt"), scan_day_caches(dirs, "attrib"))
+    coverage = cov.finalise(
+        [cov.CoverageDay(pl.read_parquet(d / "cov_stats.parquet"), pl.read_parquet(d / "cov_hist.parquet")) for d in dirs],
+        min_sample_points=min_sample_points,
+    )
+    moves = pl.concat(scan_day_caches(dirs, "moves")).group_by("airport", "runway", "op", "large").agg(pl.col("n").sum()).collect()
     airports = build_airports(moves, ref, n_days)
 
     under = airports.filter(pl.col("capture_ratio") < CAPTURE_MIN)["icao"].to_list()

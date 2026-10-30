@@ -122,55 +122,98 @@ def aggregate_day(overhead: pl.DataFrame, nearby: pl.DataFrame, legs: pl.DataFra
 # ----------------------------------------------------------------- merge
 
 
-def _p90_matrix(day_idx: np.ndarray, cell_idx: np.ndarray, vals: np.ndarray, n_cells: int, n_days: int) -> np.ndarray:
-    """90th percentile over ALL n_days per cell, zeros included (numpy linear interpolation)."""
-    out = np.zeros(n_cells, dtype=np.float64)
-    chunk = 200_000
-    for lo in range(0, n_cells, chunk):
-        hi = min(lo + chunk, n_cells)
-        sel = (cell_idx >= lo) & (cell_idx < hi)
-        mat = np.zeros((hi - lo, n_days), dtype=np.int32)
-        mat[cell_idx[sel] - lo, day_idx[sel]] = vals[sel]
-        out[lo:hi] = np.percentile(mat, 90, axis=1)
+P90_CHUNK = 200_000
+FOLD_DAYS = 8
+
+
+def _p90_matrix(cells_arr: np.ndarray, day_vals: Sequence[pl.LazyFrame], col: str) -> np.ndarray:
+    """90th percentile over ALL days per kept cell, zeros included (numpy linear interpolation).
+
+    Filled one day at a time into a (cells x days) matrix, so only that matrix and one day's
+    column are ever in memory. A cell absent from a day counts as zero for that day.
+    """
+    n, d = len(cells_arr), len(day_vals)
+    mat = np.zeros((n, d), dtype=np.uint16)
+    for i, lf in enumerate(day_vals):
+        day = lf.select("cell", col).collect()
+        cell = day["cell"].to_numpy()
+        vals = day[col].to_numpy()
+        idx = np.searchsorted(cells_arr, cell)
+        kept = idx < n
+        kept[kept] = cells_arr[idx[kept]] == cell[kept]
+        v = vals[kept]
+        if len(v) and v.max() > np.iinfo(np.uint16).max:
+            raise ValueError(f"{col} exceeds {np.iinfo(np.uint16).max} legs in one cell on one day")
+        mat[idx[kept], i] = v
+    out = np.zeros(n, dtype=np.float64)
+    for lo in range(0, n, P90_CHUNK):
+        out[lo : lo + P90_CHUNK] = np.percentile(mat[lo : lo + P90_CHUNK], 90, axis=1)
     return out
 
 
+def _fold_sum(days: Sequence[pl.LazyFrame], kept: pl.LazyFrame, keys: list[str]) -> pl.DataFrame:
+    """Sum column n by keys across days, for kept cells only, folding FOLD_DAYS days at a time."""
+    acc: pl.DataFrame | None = None
+    for lo in range(0, len(days), FOLD_DAYS):
+        batch = [lf.join(kept, on="cell", how="semi").select(*keys, "n") for lf in days[lo : lo + FOLD_DAYS]]
+        if acc is not None:
+            batch.insert(0, acc.lazy())
+        acc = pl.concat(batch).group_by(keys).agg(pl.col("n").sum()).collect()
+    assert acc is not None
+    return acc
+
+
 def merge_days(days: Sequence[DayAgg], min_mean: float = MIN_MEAN_PER_DAY) -> pl.DataFrame:
+    """Merge in-memory per-day aggregates. See merge_frames."""
+    return merge_frames(
+        [a.cells.lazy() for a in days], [a.alt_hist.lazy() for a in days], [a.attrib.lazy() for a in days], min_mean
+    )
+
+
+def merge_frames(
+    cells: Sequence[pl.LazyFrame],
+    alt_hist: Sequence[pl.LazyFrame],
+    attrib: Sequence[pl.LazyFrame],
+    min_mean: float = MIN_MEAN_PER_DAY,
+) -> pl.DataFrame:
     """Merge per-day aggregates into the final cells table (CELLS_SCHEMA).
 
-    Means divide by len(days) (every observed day, including days with no flight in the cell).
+    Takes one lazy frame per day for each DayAgg table (e.g. scans of the day cache), and
+    streams the cross-day group-bys, so memory does not grow with every day's rows at once.
+    Means divide by len(cells) (every observed day, including days with no flight in the cell).
     Only cells with nb_day_mean >= min_mean or oh_day_mean >= min_mean are kept.
     """
-    d = len(days)
+    d = len(cells)
     if d == 0:
         raise ValueError("no days to merge")
-    stacked = pl.concat([a.cells.with_columns(pl.lit(i, dtype=pl.UInt16).alias("day")) for i, a in enumerate(days)])
-    value_cols = [c for c in stacked.columns if c not in ("cell", "day")]
-    tot = stacked.group_by("cell").agg(
-        *[pl.col(c).sum().cast(pl.Float64).alias(c) for c in value_cols],
-        (pl.col("oh_n") > 0).sum().alias("oh_days_active"),
-    )
-    tot = tot.filter(
-        (pl.col("nb_n") / d >= min_mean - 1e-12) | (pl.col("oh_n") / d >= min_mean - 1e-12)
-    ).sort("cell")
+    value_cols = [c for c in cells[0].collect_schema().names() if c != "cell"]
+    # Running totals, folded a few days at a time: a single group-by over every day's rows
+    # holds them all at once (about 80 MB a day), which a 90-day build cannot afford.
+    sums = [pl.col(c).sum() for c in (*value_cols, "oh_days_active")]
+    tot: pl.DataFrame | None = None
+    for lo in range(0, d, FOLD_DAYS):
+        batch = [
+            lf.select(
+                "cell",
+                *[pl.col(c).cast(pl.Float64) for c in value_cols],
+                (pl.col("oh_n") > 0).cast(pl.UInt32).alias("oh_days_active"),
+            )
+            for lf in cells[lo : lo + FOLD_DAYS]
+        ]
+        if tot is not None:
+            batch.insert(0, tot.lazy())
+        tot = pl.concat(batch).group_by("cell").agg(sums).collect()
+    assert tot is not None
+    tot = tot.filter((pl.col("nb_n") / d >= min_mean - 1e-12) | (pl.col("oh_n") / d >= min_mean - 1e-12)).sort("cell")
     cells_arr = tot["cell"].to_numpy()
-    n = len(cells_arr)
+    kept = tot.select("cell").lazy()
 
     # p90 over all days, zeros included
-    p90 = {}
-    for prefix in ("oh", "nb"):
-        s = stacked.join(tot.select("cell"), on="cell", how="semi")
-        cell_idx = np.searchsorted(cells_arr, s["cell"].to_numpy())
-        p90[prefix] = _p90_matrix(
-            s["day"].to_numpy().astype(np.int64), cell_idx, s[f"{prefix}_n"].to_numpy().astype(np.int64), n, d
-        )
+    p90 = {prefix: _p90_matrix(cells_arr, cells, f"{prefix}_n") for prefix in ("oh", "nb")}
 
     # median altitude of overhead legs
     hist = (
-        pl.concat([a.alt_hist for a in days])
-        .join(tot.select("cell"), on="cell", how="semi")
-        .group_by("cell", "bin")
-        .agg(pl.col("n").sum())
+        _fold_sum(alt_hist, kept, ["cell", "bin"])
         .sort("cell", "bin")
         .with_columns(
             pl.col("n").cum_sum().over("cell").alias("cum"),
@@ -187,10 +230,8 @@ def merge_days(days: Sequence[DayAgg], min_mean: float = MIN_MEAN_PER_DAY) -> pl
 
     # top-2 (airport, runway, op) among overhead legs
     att = (
-        pl.concat([a.attrib for a in days])
+        _fold_sum(attrib, kept, ["cell", "airport", "runway", "op"])
         .join(tot.select("cell", "oh_n"), on="cell", how="inner")
-        .group_by("cell", "airport", "runway", "op", "oh_n")
-        .agg(pl.col("n").sum())
         .sort(["cell", "n", "airport", "runway", "op"], descending=[False, True, False, False, False])
         .with_columns((pl.int_range(pl.len()).over("cell") + 1).alias("rank"))
         .filter(pl.col("rank") <= 2)
