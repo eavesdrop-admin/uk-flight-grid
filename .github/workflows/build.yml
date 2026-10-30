@@ -24,6 +24,10 @@ on:
         description: "Sample every Nth day (4 is the production default)"
         type: string
         default: "4"
+      workers:
+        description: "Days processed in parallel. Each peaks at about 4.7 GB, so 2 fits the 16 GB hosted runner"
+        type: string
+        default: "2"
 
 permissions:
   contents: read
@@ -40,6 +44,7 @@ jobs:
       MODE: ${{ inputs.mode }}
       MONTH: ${{ inputs.month }}
       STRIDE: ${{ inputs.stride }}
+      WORKERS: ${{ inputs.workers }}
       FLIGHT_GRID_S3_ENDPOINT: ${{ secrets.FLIGHT_GRID_S3_ENDPOINT }}
       FLIGHT_GRID_S3_ACCESS_KEY_ID: ${{ secrets.FLIGHT_GRID_S3_ACCESS_KEY_ID }}
       FLIGHT_GRID_S3_SECRET_ACCESS_KEY: ${{ secrets.FLIGHT_GRID_S3_SECRET_ACCESS_KEY }}
@@ -69,7 +74,7 @@ jobs:
         if: inputs.mode == 'pilot'
         run: |
           set +e
-          uv run python sample_check.py --month "$MONTH" --stride "$STRIDE" --extract-dir out/extract --work out/pilot
+          uv run python sample_check.py --month "$MONTH" --stride "$STRIDE" --extract-dir out/extract --work out/pilot --workers "$WORKERS"
           status=$?
           # Upload pass or fail: validate_grid refuses a failing check, and the record is useful either way.
           uv run python store.py put out/pilot/sampling_check.json "pilot/${MONTH}/sampling_check.json"
@@ -77,7 +82,7 @@ jobs:
 
       - name: Build grid
         if: inputs.mode == 'grid'
-        run: uv run python build_grid.py --extract-dir out/extract --out out/grid --cache out/agg --day-stride "$STRIDE" --workers 4
+        run: uv run python build_grid.py --extract-dir out/extract --out out/grid --cache out/agg --day-stride "$STRIDE" --workers "$WORKERS"
       - name: Fetch the pilot sampling check
         if: inputs.mode == 'grid' && inputs.stride != '1'
         run: uv run python store.py get "pilot/${MONTH}/sampling_check.json" out/pilot/sampling_check.json || echo "no pilot check found for ${MONTH}; validation will fail the sampling gate"
