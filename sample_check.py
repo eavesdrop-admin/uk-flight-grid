@@ -179,6 +179,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{'PASS' if result['passed'] else 'FAIL'}: {a.month}, {result['days_sampled']} sampled of {result['days_full']} days -> {out}")
     for r in result.get("reasons", []):
         print(f"  {r}")
+    # Golden points and summary errors only (no grid cells), so safe for the public log.
+    for k in ("top_within_fraction", "top_median_error", "top_p90_error", "top_max_error"):
+        if k in result:
+            print(f"  {k}: {result[k]}")
+    for g in result.get("golden", []):
+        print(f"  golden {g['name']}: full {g['full_oh_day_mean']} sampled {g['sampled_oh_day_mean']}"
+              + (f" err {g['rel_error']:.1%} p90 {g['full_oh_day_p90']}/{g['sampled_oh_day_p90']}"
+                 f" active {g['full_days_active']}/{g['sampled_days_active']}" if g.get("gated") else " (not gated)"))
     return 0 if result["passed"] else 1
 
 
