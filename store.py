@@ -82,7 +82,8 @@ def get(s3: Any, key: str, local: Path, bucket: str | None = None) -> None:
 def put_dir(s3: Any, directory: Path, prefix: str, bucket: str | None = None) -> list[str]:
     prefix = prefix.rstrip("/") + "/"
     keys = []
-    for p in sorted(Path(directory).iterdir()):
+    # Smallest first, so validation.json and meta.json land even if a large file fails.
+    for p in sorted((f for f in Path(directory).iterdir() if f.is_file()), key=lambda f: (f.stat().st_size, f.name)):
         if p.is_file():
             put(s3, p, prefix + p.name, bucket)
             keys.append(prefix + p.name)
