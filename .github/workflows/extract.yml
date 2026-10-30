@@ -23,9 +23,9 @@ on:
         type: string
         default: ""
       stride:
-        description: "sampled only: take every Nth day (4 is the production default)"
+        description: "sampled only: take every Nth day (2 is the production default: the 2026-09 pilot failed at 4 on wind-dependent approach paths)"
         type: string
-        default: "4"
+        default: "2"
       max_parallel:
         description: "Concurrent day jobs. 6 is the plan's cap so the GitHub release CDN is not throttled"
         type: string

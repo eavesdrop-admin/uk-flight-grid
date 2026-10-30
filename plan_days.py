@@ -1,6 +1,6 @@
 """Which days to extract and build. Pure date arithmetic, no network.
 
-    python plan_days.py sampled [--stride 4] [--end 2026-09-30]   # the production sample
+    python plan_days.py sampled [--stride 2] [--end 2026-09-30]   # the production sample
     python plan_days.py pilot --month 2026-09                     # every day of one month
     python plan_days.py dates 2026-09-01,2026-09-05               # an explicit list
     python plan_days.py window                                    # start and end of the window
@@ -21,7 +21,7 @@ import sys
 from datetime import date, timedelta
 
 WINDOW_MONTHS = 12
-DEFAULT_STRIDE = 4
+DEFAULT_STRIDE = 2
 MAX_MATRIX_JOBS = 256  # GitHub Actions limit on a matrix
 
 

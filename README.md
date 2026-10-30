@@ -93,7 +93,7 @@ outcode centroids); capture ratio against DfT 2024 for the 15 busiest England an
 airports (0.90 to 1.35); coverage invariants; barometric altitude share under 20%; and, for a
 sampled build, a passing sampled-vs-full pilot check made with the same builder version and
 stride. `sample_check.py` requires every golden point with traffic, and 90% of the 1,000
-busiest cells, to agree within 10% on `oh_day_mean`. Not done here, and listed under
+busiest cells, to agree within 10% (or, for a golden point, one flight a day) on `oh_day_mean`. The production stride is 2: the 2026-09 pilot failed at 4 on a wind-dependent approach path (Slough, Heathrow 09L, 31% out) and passed at 2 (7.8%). Not done here, and listed under
 `deferred` in `validation.json`: the Spearman check against DEFRA Lden and the prod-versus-staging
 replica check, which need data this repo does not hold.
 

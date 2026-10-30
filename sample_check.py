@@ -3,7 +3,7 @@
     uv run python sample_check.py --month 2026-09 --extract-dir out/extract --work out/pilot
 
 Builds one full calendar month (every day, stride 1) and the same month at the production
-stride (every 4th day by ordinal, the same days ``plan_days.py sampled`` picks), then compares
+stride (every 2nd day by ordinal, the same days ``plan_days.py sampled`` picks), then compares
 per-cell ``oh_day_mean``:
 
   * every golden point that has at least MIN_GOLDEN_MEAN legs a day in the full build must
@@ -46,7 +46,7 @@ TOP_N = 1_000
 TOP_MIN_FRACTION = 0.90
 MIN_GOLDEN_MEAN = 1.0
 MIN_FULL_MONTH_SHARE = 0.90  # of the calendar month's days must be usable, or it is not a full month
-DEFAULT_STRIDE = 4
+DEFAULT_STRIDE = 2
 
 
 def rel_error(full: np.ndarray, sampled: np.ndarray) -> np.ndarray:

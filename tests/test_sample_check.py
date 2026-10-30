@@ -116,10 +116,10 @@ def test_run_builds_full_month_then_the_ordinal_stride_subset(month_extracts, mo
     res = sc.run("2026-09", tmp / "extract", tmp / "work", tmp / "cache", tmp / "ref", golden)
     full_days, full_stride = calls[0]
     sub_days, sub_stride = calls[1]
-    assert len(full_days) == 30 and full_stride == 1 and sub_stride == 4
-    assert sub_days == [d for d in full_days if date.fromisoformat(d).toordinal() % 4 == 0]
+    assert len(full_days) == 30 and full_stride == 1 and sub_stride == 2
+    assert sub_days == [d for d in full_days if date.fromisoformat(d).toordinal() % 2 == 0]
     assert res["passed"] and res["days_full"] == 30 and res["days_sampled"] == len(sub_days)
-    assert res["builder_version"] == sc.build_grid.BUILDER_VERSION and res["stride"] == 4
+    assert res["builder_version"] == sc.build_grid.BUILDER_VERSION and res["stride"] == 2
 
 
 def test_run_refuses_a_month_with_missing_days(month_extracts, monkeypatch):

@@ -37,7 +37,7 @@ def test_stride_one_is_every_day():
 
 def test_cli_outputs_json_and_enforces_the_matrix_limit(capsys):
     assert pd.main(["sampled", "--today", "2026-10-29"]) == 0
-    assert len(json.loads(capsys.readouterr().out)) == 91
+    assert len(json.loads(capsys.readouterr().out)) == 182  # default stride 2
     assert pd.main(["sampled", "--today", "2026-10-29", "--stride", "1"]) == 1  # 365 days > 256
     assert pd.main(["pilot", "--month", "2026-02"]) == 0
     assert len(json.loads(capsys.readouterr().out)) == 28

@@ -21,9 +21,9 @@ on:
         type: string
         default: ""
       stride:
-        description: "Sample every Nth day (4 is the production default)"
+        description: "Sample every Nth day (2 is the production default: the 2026-09 pilot failed at 4 on wind-dependent approach paths)"
         type: string
-        default: "4"
+        default: "2"
       workers:
         description: "Days processed in parallel. Each peaks at about 4.7 GB, so 2 fits the 16 GB hosted runner"
         type: string
@@ -39,7 +39,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 360
     env:
       MODE: ${{ inputs.mode }}
       MONTH: ${{ inputs.month }}

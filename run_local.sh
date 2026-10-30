@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run the whole pipeline on this machine, with nothing uploaded anywhere. Outputs stay under out/.
 #
-#   ./run_local.sh extract sampled            # the production sample: every 4th day of the last 12 months
+#   ./run_local.sh extract sampled            # the production sample: every 2nd day of the last 12 months
 #   ./run_local.sh extract pilot 2026-09      # every day of one month
 #   ./run_local.sh extract dates 2026-09-01,2026-09-05
 #   ./run_local.sh pilot 2026-09              # sampled-vs-full check on that month -> out/pilot/sampling_check.json
