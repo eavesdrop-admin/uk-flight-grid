@@ -131,3 +131,30 @@ def test_run_refuses_a_month_with_missing_days(month_extracts, monkeypatch):
     res = sc.run("2026-09", tmp / "extract", tmp / "work", tmp / "cache", tmp / "ref", golden)
     assert not res["passed"] and "not a full month" in res["reasons"][0]
     assert len(calls) == 1  # never built the sampled grid
+
+
+def test_quiet_point_passes_within_one_flight_a_day_busy_point_still_needs_ten_percent():
+    import polars as pl
+    from h3.api import basic_int as h3i
+
+    from grid_schema import CELL_RES
+    from sample_check import compare
+
+    quiet = {"name": "quiet", "lat": 52.05, "lon": -1.78}
+    busy = {"name": "busy", "lat": 51.47, "lon": -0.36}
+    cq, cb = (h3i.latlng_to_cell(p["lat"], p["lon"], CELL_RES) for p in (quiet, busy))
+
+    def frame(q: float, b: float) -> pl.DataFrame:
+        return pl.DataFrame({"h3_r9": [cq, cb], "oh_day_mean": [q, b], "oh_day_p90": [6, 400],
+                             "oh_days_active": [29, 30]})
+
+    # Chipping Campden in the 2026-09 pilot: 3.3 vs 3.75 a day (13.6%, but under one flight).
+    r = compare(frame(3.3, 300.0), frame(3.75, 296.0), [quiet, busy])
+    assert r["passed"], r["reasons"]
+    # A busy point 1 flight out is fine only because it is within 10%; 31% out still fails.
+    r = compare(frame(3.3, 72.0), frame(3.75, 94.0), [quiet, busy])
+    assert not r["passed"]
+    assert any("busy" in x for x in r["reasons"]) and not any("quiet" in x for x in r["reasons"])
+    # A quiet point more than a flight a day out still fails.
+    r = compare(frame(3.0, 300.0), frame(4.5, 300.0), [quiet, busy])
+    assert not r["passed"]

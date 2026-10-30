@@ -7,7 +7,9 @@ stride (every 4th day by ordinal, the same days ``plan_days.py sampled`` picks),
 per-cell ``oh_day_mean``:
 
   * every golden point that has at least MIN_GOLDEN_MEAN legs a day in the full build must
-    agree within TOLERANCE (10%), and at least one must qualify;
+    agree within TOLERANCE (10%) or within ABS_TOLERANCE (1 leg a day), whichever is wider,
+    and at least one must qualify. Above 10 a day the 10% rule is the stricter one; below
+    it, 10% is less than one flight and fails on a single flight's sampling noise;
   * for the TOP_N (1,000) busiest cells of the full build, at least TOP_MIN_FRACTION (90%)
     must agree within TOLERANCE. A cell absent from the sampled grid counts as zero.
 
@@ -39,6 +41,7 @@ from plan_days import month_days, sampled_in
 from reference import DATA_DIR
 
 TOLERANCE = 0.10
+ABS_TOLERANCE = 1.0  # legs a day; see the module docstring
 TOP_N = 1_000
 TOP_MIN_FRACTION = 0.90
 MIN_GOLDEN_MEAN = 1.0
@@ -50,12 +53,19 @@ def rel_error(full: np.ndarray, sampled: np.ndarray) -> np.ndarray:
     return np.abs(sampled - full) / full
 
 
+def agrees(full: np.ndarray | float, sampled: np.ndarray | float, tolerance: float, abs_tolerance: float):
+    """Within `tolerance` of the full value, or within `abs_tolerance` legs a day."""
+    diff = np.abs(np.asarray(sampled, dtype=float) - np.asarray(full, dtype=float))
+    return (diff <= tolerance * np.asarray(full, dtype=float)) | (diff <= abs_tolerance)
+
+
 def compare(
     full: pl.DataFrame,
     sampled: pl.DataFrame,
     golden: list[dict],
     *,
     tolerance: float = TOLERANCE,
+    abs_tolerance: float = ABS_TOLERANCE,
     top_n: int = TOP_N,
     top_min_fraction: float = TOP_MIN_FRACTION,
     min_golden_mean: float = MIN_GOLDEN_MEAN,
@@ -67,7 +77,7 @@ def compare(
     f = top["oh_day_mean"].to_numpy().astype(float)
     s = np.array([s_mean.get(c, 0.0) for c in top["h3_r9"].to_list()], dtype=float)
     err = rel_error(f, s) if len(f) else np.array([])
-    top_within = float((err <= tolerance).mean()) if len(err) else 0.0
+    top_within = float(agrees(f, s, tolerance, abs_tolerance).mean()) if len(err) else 0.0
 
     by_cell = {r["h3_r9"]: r for r in full.iter_rows(named=True)}
     s_rows = {r["h3_r9"]: r for r in sampled.iter_rows(named=True)}
@@ -82,7 +92,8 @@ def compare(
             row["gated"] = False
         else:
             e = abs(row["sampled_oh_day_mean"] - fr["oh_day_mean"]) / fr["oh_day_mean"]
-            row.update(gated=True, rel_error=round(float(e), 4), within=bool(e <= tolerance),
+            ok = bool(agrees(fr["oh_day_mean"], row["sampled_oh_day_mean"], tolerance, abs_tolerance))
+            row.update(gated=True, rel_error=round(float(e), 4), within=ok,
                        full_oh_day_p90=int(fr["oh_day_p90"]), sampled_oh_day_p90=int(sr["oh_day_p90"]) if sr else 0,
                        full_days_active=int(fr["oh_days_active"]), sampled_days_active=int(sr["oh_days_active"]) if sr else 0)
             if not row["within"]:
@@ -94,11 +105,11 @@ def compare(
     if n_gated == 0:
         reasons.append(f"no golden point had {min_golden_mean} legs a day in the full build")
     if golden_fail:
-        reasons.append(f"golden points outside {tolerance:.0%}: {', '.join(golden_fail)}")
+        reasons.append(f"golden points outside {tolerance:.0%} and {abs_tolerance:g} a day: {', '.join(golden_fail)}")
     if len(f) == 0:
         reasons.append("full build has no cells")
     elif top_within < top_min_fraction:
-        reasons.append(f"only {top_within:.1%} of the {len(f)} busiest cells within {tolerance:.0%} (need {top_min_fraction:.0%})")
+        reasons.append(f"only {top_within:.1%} of the {len(f)} busiest cells within {tolerance:.0%} or {abs_tolerance:g} a day (need {top_min_fraction:.0%})")
     return {
         "passed": not reasons,
         "reasons": reasons,
@@ -142,7 +153,7 @@ def run(
 
     result: dict[str, Any] = {
         "month": month, "stride": stride, "builder_version": build_grid.BUILDER_VERSION,
-        "tolerance": TOLERANCE, "top_n": TOP_N, "top_min_fraction": TOP_MIN_FRACTION,
+        "tolerance": TOLERANCE, "abs_tolerance": ABS_TOLERANCE, "top_n": TOP_N, "top_min_fraction": TOP_MIN_FRACTION,
         "days_full": len(used), "days_sampled": len(sub_days), "sampled_days": sub_days,
         "month_days": len(wanted), "checked_at": date.today().isoformat(),
     }
