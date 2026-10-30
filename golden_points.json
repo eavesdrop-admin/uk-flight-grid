@@ -76,7 +76,7 @@
         ],
         "days_active_frac": [
           0.45,
-          0.95
+          1.0
         ],
         "coverage_in": [
           "good",
@@ -86,7 +86,10 @@
       "centreline": {
         "airport": "EGLL",
         "runway": "27R"
-      }
+      },
+      "notes": [
+        "2026-10-30: days_active upper bound 0.95 -> 1.0. Active on 177 of 177 days (12-month build) and 30 of 30 (Sept full-month pilot); traffic, runway and altitude all as expected."
+      ]
     },
     {
       "name": "Isleworth TW7 4HT, 6 km out on EGLL 27R",
@@ -263,11 +266,11 @@
       }
     },
     {
-      "name": "Control: Chipping Campden GL55 6AA (quiet, well covered)",
-      "postcode": "GL55 6AA",
-      "lat": 52.053137,
-      "lon": -1.781164,
-      "basis": "Rural Cotswolds, more than 30 km from any airport with scheduled traffic",
+      "name": "Control: Louth LN11 9AA (quiet, well covered)",
+      "postcode": "LN11 9AA",
+      "lat": 53.367348,
+      "lon": -0.00157,
+      "basis": "Lincolnshire Wolds market town, 32 km from the nearest airfield in the reference. Replaces Chipping Campden (2026-10-30), whose receiver floor is 1,600 ft, so it was never a well-covered control",
       "expect": {
         "no_airport_attribution": true,
         "oh_day_mean_max": 10,

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from attribute import attribute_aircraft, classify_leg
+from attribute import attribute_aircraft, classify_leg, helicopter_movements
 from reference import DEFAULT_DFT_PATH, build_reference
 from segment import Leg, split_legs
 from synth import final_approach, fly, offset
@@ -157,6 +157,22 @@ def test_helicopter_by_category_and_by_flag_wins_over_arrival(ref, e):
     track = final_approach(e["27L"], 12, 300, category="A7")
     assert classify_leg(leg_of(track), ref).label == "H"
     assert classify_leg(leg_of(final_approach(e["27L"], 12, 300, heli=True)), ref).label == "H"
+
+
+def test_helicopter_landing_and_lifting_at_an_airport_count_as_movements(ref):
+    a = ref.airports["EGLL"]
+    far = offset(a.lat, a.lon, 0, 20_000)
+    land = leg_of(fly([(*far, 2_000), (a.lat, a.lon, a.elevation_ft + 100)], gs_kt=100, category="A7"))
+    assert helicopter_movements(land, ref) == [("EGLL", "A")]
+    lift = leg_of(fly([(a.lat, a.lon, a.elevation_ft + 100), (*far, 2_000)], gs_kt=100, category="A7"))
+    assert helicopter_movements(lift, ref) == [("EGLL", "D")]
+
+
+def test_helicopter_passing_high_or_far_is_not_a_movement(ref):
+    a = ref.airports["EGLL"]
+    far, other = offset(a.lat, a.lon, 0, 20_000), offset(a.lat, a.lon, 0, -20_000)
+    assert helicopter_movements(leg_of(fly([(*far, 1_500), (a.lat, a.lon, 1_500), (*other, 1_500)], gs_kt=100, category="A7")), ref) == []
+    assert helicopter_movements(leg_of(fly([(*far, 2_000), (*offset(a.lat, a.lon, 0, 3_000), a.elevation_ft + 100)], gs_kt=100, category="A7")), ref) == []
 
 
 def test_military_wins_over_arrival(ref, e):

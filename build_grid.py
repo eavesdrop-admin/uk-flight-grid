@@ -31,7 +31,7 @@ from h3.api import basic_int as h3i
 
 import coverage as cov
 from aggregate import DayAgg, aggregate_day, merge_frames
-from attribute import attribute_aircraft
+from attribute import attribute_aircraft, helicopter_movements
 from grid_schema import (
     AIRPORTS_SCHEMA,
     COVERAGE_RES,
@@ -117,6 +117,10 @@ def process_day(df: pl.DataFrame, ref: Reference) -> tuple[DayAgg, cov.CoverageD
                 cat = next((p.category for p in leg.points if p.category), None)
                 key = (att.airport, att.runway or "", att.label, cat in CAPTURE_CATEGORIES)
                 moves[key] = moves.get(key, 0) + 1
+            elif att.label == "H":
+                for airport, op in helicopter_movements(leg, ref):
+                    key = (airport, "", f"H{op}", True)
+                    moves[key] = moves.get(key, 0) + 1
             if min(p.alt_ft for p in leg.points) >= MAX_COUNTED_ALT_FT:  # type: ignore[type-var]
                 continue
             res = resample(leg)
@@ -221,7 +225,8 @@ def _worker(extract_path: str, cache_dir: str, ref_dir: str, key: dict) -> tuple
 def build_airports(moves: pl.DataFrame, ref: Reference, n_days: int) -> pl.DataFrame:
     """One row per airport that has an observed movement or a DfT figure."""
     annual = 365.0 / n_days
-    ad = moves.filter(pl.col("op").is_in(["A", "D"]))
+    # Helicopter arrivals and departures (HA, HD) count towards the DfT comparison; they carry no runway.
+    ad = moves.filter(pl.col("op").is_in(["A", "D", "HA", "HD"]))
     rows = []
     for icao, a in ref.airports.items():
         mine = ad.filter(pl.col("airport") == icao)

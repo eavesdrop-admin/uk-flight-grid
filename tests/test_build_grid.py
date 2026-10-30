@@ -178,3 +178,14 @@ def test_airports_without_movements_or_dft_figure_are_omitted(ref):
     out = build_grid.build_airports(empty, ref, n_days=1)
     assert set(out["icao"]) == {i for i, a in ref.airports.items() if a.dft_atm is not None}
     assert out["observed_movements_annualised"].sum() == 0
+
+
+def test_helicopter_movements_count_towards_capture_but_not_runway_shares(ref):
+    moves = pl.DataFrame(
+        [("EGLL", "27L", "A", True, 4), ("EGLL", "", "HA", True, 3), ("EGLL", "", "HD", True, 2)],
+        schema={"airport": pl.String, "runway": pl.String, "op": pl.String, "large": pl.Boolean, "n": pl.UInt32},
+        orient="row",
+    )
+    a = build_grid.build_airports(moves, ref, n_days=365).filter(pl.col("icao") == "EGLL").row(0, named=True)
+    assert a["observed_movements_annualised"] == 9
+    assert json.loads(a["top_runways"]) == [{"runway": "27L", "op": "A", "share": 1.0}]

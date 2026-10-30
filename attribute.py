@@ -42,6 +42,11 @@ TCH_FT = 50.0
 SYNTH_STEP_M = 100.0
 # Circuit: arrival and departure at one airport within this long
 CIRCUIT_WINDOW_S = 20 * 60.0
+# Helicopter movement, for the capture ratio only: trace starts or ends low, near the airport.
+# DfT counts helicopter air transport movements (Norwich offshore flights are most of its total),
+# so leaving them out made the ratio say Norwich was under-captured when it was not.
+HELI_RADIUS_M = 1_500.0
+HELI_MAX_AGL_FT = 500.0
 
 
 @dataclass(frozen=True)
@@ -214,6 +219,30 @@ def detect_departure(leg: Leg, ref: Reference) -> Movement | None:
     if nearest is not None:
         return Movement(nearest[1].airport, None)
     return None
+
+
+def _heli_airport(p: Point, ref: Reference) -> str | None:
+    """Airport whose reference point is within HELI_RADIUS_M of p, with p below HELI_MAX_AGL_FT."""
+    best = None
+    for a in ref.airports.values():
+        if abs(a.lat - p.lat) > HELI_RADIUS_M / 111_000.0 + 0.01:
+            continue
+        d = haversine_m(p.lat, p.lon, a.lat, a.lon)
+        if d <= HELI_RADIUS_M and p.alt_ft - a.elevation_ft <= HELI_MAX_AGL_FT and (best is None or d < best[0]):
+            best = (d, a.icao)
+    return best[1] if best else None
+
+
+def helicopter_movements(leg: Leg, ref: Reference) -> list[tuple[str, str]]:
+    """(airport, 'A' or 'D') for a helicopter leg that ends or starts low at an airport."""
+    out = []
+    dep = _heli_airport(leg.points[0], ref)
+    if dep:
+        out.append((dep, "D"))
+    arr = _heli_airport(leg.points[-1], ref)
+    if arr:
+        out.append((arr, "A"))
+    return out
 
 
 # --------------------------------------------------------- classification

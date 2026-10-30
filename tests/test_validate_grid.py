@@ -128,6 +128,15 @@ def test_capture_ratio_fails_below_and_above_the_band_and_when_null():
         assert res.status == "fail" and "EGKK" in res.detail
 
 
+def test_bournemouth_is_exempt_from_the_upper_bound_only():
+    base = {k: 1.0 for k in EW}
+    res = vg.check_capture_ratio(airports_df({**base, "EGHH": 1.8}))
+    assert res.status == "pass"
+    assert next(a for a in res.data["airports"] if a["icao"] == "EGHH")["upper_bound_exempt"]
+    assert vg.check_capture_ratio(airports_df({**base, "EGHH": 0.5})).status == "fail"
+    assert vg.check_capture_ratio(airports_df({**base, "EGKK": 1.8})).status == "fail"
+
+
 def test_capture_ratio_only_counts_england_and_wales():
     # A Scottish airport with a huge DfT figure must not take a top-15 slot, and a bad ratio there is ignored.
     ratios = {"EGPH": 0.1, **{k: 1.0 for k in EW[:15]}}

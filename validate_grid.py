@@ -13,7 +13,8 @@ Gates (a gate is a failure unless it is listed as skipped or deferred):
   golden:<name>    each point in golden_points.json: airport attribution, runway, traffic
                    level, median altitude, days active, receiver coverage.
   capture_ratio    observed / DfT movements within 0.90 to 1.35 for the 15 busiest England
-                   and Wales airports in the DfT file.
+                   and Wales airports in the DfT file (upper bound waived, with a recorded
+                   reason, for the airports in CAPTURE_HI_EXEMPT).
   coverage         no 'good' cell with floor_ft above 1,500; statuses valid; table not empty.
   baro_share       under 20% of counted points use barometric altitude (needs --extract-dir).
   sampling_check   stride > 1 needs a passing sampled-vs-full pilot check made with the same
@@ -49,6 +50,12 @@ DEFAULT_GOLDEN = HERE / "golden_points.json"
 
 CAPTURE_TOP_N = 15
 CAPTURE_LO, CAPTURE_HI = 0.90, 1.35
+# Airports exempt from the upper bound only, with the evidence. An over-count here means we see
+# real flights that DfT's air transport movements leave out; the lower bound still applies.
+CAPTURE_HI_EXEMPT = {
+    "EGHH": "Bournemouth: flight training, test and maintenance flying (2026-07-15 and 2026-09-16 each had 6 to 9"
+    " mid-size aircraft making 3 to 6 low passes); DfT ATMs exclude training and positioning, residents still hear them",
+}
 GOOD_FLOOR_FT_MAX = 1_500
 BARO_SHARE_MAX = 0.20
 # Same numbers as the Eavesdrop loader (apps/workers/scripts/ingest_adsb_lol_flight_grid.py).
@@ -110,8 +117,10 @@ def check_capture_ratio(airports: pl.DataFrame, top_n: int = CAPTURE_TOP_N, lo: 
     rows, bad = [], []
     for r in top.iter_rows(named=True):
         ratio = r["capture_ratio"]
-        rows.append({"icao": r["icao"], "capture_ratio": None if ratio is None else round(float(ratio), 3), "dft_atm": r["dft_atm"]})
-        if ratio is None or not (lo <= ratio <= hi):
+        exempt = CAPTURE_HI_EXEMPT.get(r["icao"])
+        rows.append({"icao": r["icao"], "capture_ratio": None if ratio is None else round(float(ratio), 3), "dft_atm": r["dft_atm"],
+                     **({"upper_bound_exempt": exempt} if exempt else {})})
+        if ratio is None or ratio < lo or (ratio > hi and not exempt):
             bad.append(f"{r['icao']} {'n/a' if ratio is None else f'{ratio:.2f}'}")
     return Check(
         "capture_ratio",
