@@ -55,6 +55,9 @@ CAPTURE_LO, CAPTURE_HI = 0.90, 1.35
 CAPTURE_HI_EXEMPT = {
     "EGHH": "Bournemouth: flight training, test and maintenance flying (2026-07-15 and 2026-09-16 each had 6 to 9"
     " mid-size aircraft making 3 to 6 low passes); DfT ATMs exclude training and positioning, residents still hear them",
+    "EGSH": "Norwich: offshore helicopter base. CAA 2024 Table 19 has 8,542 of its 13,212 ATMs by helicopter, and Table 03.1"
+    " adds 3,123 positioning and 650 test and training movements that DfT ATMs exclude (empty shuttle legs among them);"
+    " against ATM + positioning + test and training the 2026-07-15 and 2026-09-16 sample is 1.15",
 }
 GOOD_FLOOR_FT_MAX = 1_500
 BARO_SHARE_MAX = 0.20
