@@ -83,3 +83,19 @@ def test_skips_closed_water_and_helipad_ends(tmp_path):
     r2 = build_reference(ap, rw, None, include_small_without_iata=True)
     assert set(r2.airports) == {"EGYY"}
     assert {e.ident for e in r2.airports["EGYY"].runways} == {"09", "27"}
+
+
+def test_airport_code_is_the_icao_code_not_a_local_ident(tmp_path):
+    ap, rw = tmp_path / "a.csv", tmp_path / "r.csv"
+    ap.write_text(
+        'id,ident,type,name,latitude_deg,longitude_deg,elevation_ft,continent,iso_country,iso_region,municipality,scheduled_service,icao_code,iata_code,gps_code,local_code,home_link,wikipedia_link,keywords\n'
+        '1,GB-1222,small_airport,RAF Wyton,52.357,-0.108,135,EU,GB,GB-ENG,x,no,EGUY,QUY,EGUY,,,,\n'
+        '2,EGDX,medium_airport,MOD St Athan,51.405,-3.436,163,EU,GB,GB-WLS,x,no,EGSY,,EGSY,,,,\n'
+    )
+    head = "id,airport_ref,airport_ident,length_ft,width_ft,surface,lighted,closed,le_ident,le_latitude_deg,le_longitude_deg,le_elevation_ft,le_heading_degT,le_displaced_threshold_ft,he_ident,he_latitude_deg,he_longitude_deg,he_elevation_ft,he_heading_degT,he_displaced_threshold_ft\n"
+    rw.write_text(
+        head
+        + '10,1,GB-1222,5000,100,ASP,1,0,09,52.357,-0.12,,90,,27,52.357,-0.09,,270,\n'
+        + '11,2,EGDX,5000,100,ASP,1,0,08,51.405,-3.45,,80,,26,51.405,-3.42,,260,\n'
+    )
+    assert set(build_reference(ap, rw, None).airports) == {"EGUY", "EGSY"}

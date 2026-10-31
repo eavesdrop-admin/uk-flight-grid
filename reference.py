@@ -244,7 +244,9 @@ def build_reference(
             lat, lon = _f(row["latitude_deg"]), _f(row["longitude_deg"])
             if lat is None or lon is None:
                 continue
-            icao = row["ident"]
+            # OurAirports' ident is a local code ("GB-1222") or an outdated ICAO for some
+            # fields (RAF Wyton, St Athan); the ICAO code, then the GPS code, is the real one.
+            icao = (row.get("icao_code") or "").strip() or (row.get("gps_code") or "").strip() or row["ident"]
             a = Airport(
                 icao=icao,
                 name=row["name"],
