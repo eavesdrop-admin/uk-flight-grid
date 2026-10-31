@@ -175,6 +175,12 @@ def test_helicopter_passing_high_or_far_is_not_a_movement(ref):
     assert helicopter_movements(leg_of(fly([(*far, 2_000), (*offset(a.lat, a.lon, 0, 3_000), a.elevation_ft + 100)], gs_kt=100, category="A7")), ref) == []
 
 
+def test_helicopter_hopping_between_stands_is_not_a_movement(ref):
+    a = ref.airports["EGLL"]
+    hop = leg_of(fly([(a.lat, a.lon, a.elevation_ft + 20), (*offset(a.lat, a.lon, 0, 600), a.elevation_ft + 20)], gs_kt=45, category="A7"))
+    assert helicopter_movements(hop, ref) == []
+
+
 def test_military_wins_over_arrival(ref, e):
     a = classify_leg(leg_of(final_approach(e["27L"], 12, 300, mil=True)), ref)
     assert (a.label, a.airport, a.runway) == ("M", None, None)

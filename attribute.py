@@ -234,9 +234,15 @@ def _heli_airport(p: Point, ref: Reference) -> str | None:
 
 
 def helicopter_movements(leg: Leg, ref: Reference) -> list[tuple[str, str]]:
-    """(airport, 'A' or 'D') for a helicopter leg that ends or starts low at an airport."""
+    """(airport, 'A' or 'D') for a helicopter leg that ends or starts low at an airport.
+
+    A leg that never leaves the airport (every point low and within HELI_RADIUS_M of
+    it) is ground or hover taxiing between stands, not a take-off and a landing.
+    """
     out = []
     dep = _heli_airport(leg.points[0], ref)
+    if dep and all(_heli_airport(p, ref) == dep for p in leg.points[1:]):
+        return []
     if dep:
         out.append((dep, "D"))
     arr = _heli_airport(leg.points[-1], ref)
