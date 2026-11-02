@@ -5,6 +5,10 @@
     python plan_days.py dates 2026-09-01,2026-09-05               # an explicit list
     python plan_days.py window                                    # start and end of the window
 
+``--skip-unavailable`` drops the days recorded in data/unavailable_days.json (known upstream
+gaps). Only the extract planner uses it; the build plans every day so its days gate still
+counts those days as missing.
+
 The window is the 12 complete calendar months ending at the end of the previous month.
 Sampled days are those whose proleptic-Gregorian ordinal is divisible by the stride, so the
 same calendar days are picked whatever window they fall in: the pilot month's sampled days
@@ -19,10 +23,12 @@ import calendar
 import json
 import sys
 from datetime import date, timedelta
+from pathlib import Path
 
 WINDOW_MONTHS = 12
 DEFAULT_STRIDE = 2
 MAX_MATRIX_JOBS = 256  # GitHub Actions limit on a matrix
+UNAVAILABLE_PATH = Path(__file__).parent / "data" / "unavailable_days.json"
 
 
 def window(today: date, months: int = WINDOW_MONTHS) -> tuple[date, date]:
@@ -51,6 +57,12 @@ def sampled_in(days: list[str], stride: int) -> list[str]:
     return [d for d in days if date.fromisoformat(d).toordinal() % stride == 0]
 
 
+def unavailable_days(path: Path = UNAVAILABLE_PATH) -> dict[date, str]:
+    """Known upstream gaps and why, from the recorded list."""
+    days = json.loads(path.read_text())["days"]
+    return {date.fromisoformat(d): reason for d, reason in days.items()}
+
+
 def _emit(days: list[date], lines: bool) -> None:
     out = [d.isoformat() for d in sorted(set(days))]
     print("\n".join(out) if lines else json.dumps(out))
@@ -72,6 +84,8 @@ def main(argv: list[str] | None = None) -> int:
     for sp in (s, p, d, w):
         sp.add_argument("--today", type=date.fromisoformat, default=None, help=argparse.SUPPRESS)
         sp.add_argument("--lines", action="store_true")
+    for sp in (s, p, d):
+        sp.add_argument("--skip-unavailable", action="store_true", help="drop days in data/unavailable_days.json")
     a = ap.parse_args(argv)
 
     today = a.today or date.today()
@@ -87,6 +101,11 @@ def main(argv: list[str] | None = None) -> int:
         days = month_days(y, m)
     else:
         days = [date.fromisoformat(x.strip()) for x in a.list.split(",") if x.strip()]
+    if a.skip_unavailable:
+        gaps = unavailable_days()
+        for day in sorted(set(days) & gaps.keys()):
+            print(f"skipping {day.isoformat()}: {gaps[day]}", file=sys.stderr)
+        days = [day for day in days if day not in gaps]
     if len(set(days)) > MAX_MATRIX_JOBS:
         print(f"{len(set(days))} days exceeds the {MAX_MATRIX_JOBS}-job matrix limit; extract in chunks", file=sys.stderr)
         return 1

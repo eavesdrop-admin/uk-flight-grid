@@ -43,3 +43,17 @@ def test_cli_outputs_json_and_enforces_the_matrix_limit(capsys):
     assert len(json.loads(capsys.readouterr().out)) == 28
     assert pd.main(["dates", "2026-09-05, 2026-09-01"]) == 0
     assert json.loads(capsys.readouterr().out) == ["2026-09-01", "2026-09-05"]
+
+
+def test_skip_unavailable_drops_only_the_recorded_gaps(capsys):
+    gaps = pd.unavailable_days()
+    assert date(2026, 5, 6) in gaps and all(gaps.values())
+    assert pd.main(["sampled", "--today", "2026-11-02"]) == 0
+    every = json.loads(capsys.readouterr().out)
+    assert pd.main(["sampled", "--today", "2026-11-02", "--skip-unavailable"]) == 0
+    captured = capsys.readouterr()
+    kept = json.loads(captured.out)
+    dropped = set(every) - set(kept)
+    assert dropped == {d.isoformat() for d in gaps} & set(every)
+    assert dropped and set(kept) <= set(every)
+    assert "skipping 2026-05-06" in captured.err

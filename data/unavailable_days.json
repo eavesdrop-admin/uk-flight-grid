@@ -1,0 +1,8 @@
+{
+  "_comment": "Days adsb.lol cannot give us. The extract planner skips them (plan_days.py --skip-unavailable) so a known upstream gap does not fail every scheduled run. The build does not read this file: its days gate still counts them as missing. Add a day only after it has failed the same way on a re-run.",
+  "days": {
+    "2026-04-30": "upstream archive corrupt: zlib 'invalid block type' (failed 2026-10 and 2026-11-02)",
+    "2026-05-04": "upstream archive corrupt: zlib 'too many length or distance symbols' (failed 2026-10 and 2026-11-02)",
+    "2026-05-06": "no usable release in adsb.lol prod or staging (failed twice on 2026-11-02, runs 41469483646 and 41515645578)"
+  }
+}

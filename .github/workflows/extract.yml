@@ -72,7 +72,9 @@ jobs:
         run: |
           set -euo pipefail
           case "$MODE" in
-            sampled) days=$(python3 plan_days.py sampled --stride "$STRIDE") ;;
+            # Known upstream gaps (data/unavailable_days.json) are skipped so they do not fail
+            # every run; a new gap still fails until it is recorded there.
+            sampled) days=$(python3 plan_days.py sampled --stride "$STRIDE" --skip-unavailable) ;;
             pilot)   days=$(python3 plan_days.py pilot --month "$MONTH") ;;
             dates)   days=$(python3 plan_days.py dates "$DATES") ;;
           esac
