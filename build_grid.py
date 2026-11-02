@@ -30,6 +30,7 @@ import polars as pl
 from h3.api import basic_int as h3i
 
 import coverage as cov
+import p90_stability
 from aggregate import DayAgg, aggregate_day, merge_frames
 from attribute import attribute_aircraft, helicopter_movements
 from grid_schema import (
@@ -349,6 +350,9 @@ def build(
     cells.write_parquet(out / "cells.parquet", compression="zstd")
     coverage.write_parquet(out / "coverage.parquet", compression="zstd")
     airports.write_parquet(out / "airports.parquet", compression="zstd")
+    # Reported, not gated: how steady the busy-day count is at this sampling rate.
+    golden = json.loads((Path(__file__).parent / "golden_points.json").read_text())["points"]
+    p90_stability.write(out, cells, scan_day_caches(dirs, "cells"), [*golden, *p90_stability.WATCH_POINTS])
 
     status_counts = {s: int((coverage["status"] == s).sum()) for s in (STATUS_GOOD, STATUS_PARTIAL, STATUS_INSUFFICIENT)}
     meta = {

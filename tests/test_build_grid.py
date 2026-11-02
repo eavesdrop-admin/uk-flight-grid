@@ -189,3 +189,16 @@ def test_helicopter_movements_count_towards_capture_but_not_runway_shares(ref):
     a = build_grid.build_airports(moves, ref, n_days=365).filter(pl.col("icao") == "EGLL").row(0, named=True)
     assert a["observed_movements_annualised"] == 9
     assert json.loads(a["top_runways"]) == [{"runway": "27L", "op": "A", "share": 1.0}]
+
+
+def test_build_reports_how_steady_the_busy_day_count_is(world):
+    out, _ = run(world)
+    report = json.loads((out / "p90_stability.json").read_text())
+    assert report["days"] == 2
+    assert report["top_n"] >= 1
+    names = [p["name"] for p in report["points"]]
+    assert any(n.startswith("Windsor") for n in names)
+    for p in report["points"]:
+        lo, hi = p["p90_bootstrap_5_95"]
+        assert lo <= hi
+        assert p["p90_implied_error"] >= 0
