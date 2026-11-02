@@ -2,11 +2,15 @@
 # the day's Parquet to the PRIVATE storage bucket. Nothing derived is attached to the run
 # (no artifacts, no release assets) because the public repo's logs and artifacts are public.
 #
-# Run it by hand: Actions > extract > Run workflow. No schedule and no pull_request trigger,
-# so the storage secrets are never exposed to forks.
+# Runs by hand (Actions > extract > Run workflow) and on a schedule: 03:00 UTC on the 24th, the
+# sampled days of the current window, skipping days already in the bucket, so each month pulls
+# only the new days from adsb.lol. There is no pull_request trigger, so the storage secrets are
+# never exposed to forks.
 name: extract
 
 on:
+  schedule:
+    - cron: "0 3 24 * *"
   workflow_dispatch:
     inputs:
       mode:
@@ -46,16 +50,25 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write # the keepalive step re-enables this workflow
     outputs:
       days: ${{ steps.plan.outputs.days }}
     steps:
+      - name: Keep the schedule alive
+        # GitHub disables schedules in a public repo after 60 days without commits.
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable extract.yml -R "$GITHUB_REPOSITORY" || echo "::warning::could not re-enable the extract schedule"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: plan
         env:
-          MODE: ${{ inputs.mode }}
+          MODE: ${{ inputs.mode || 'sampled' }}
           MONTH: ${{ inputs.month }}
           DATES: ${{ inputs.dates }}
-          STRIDE: ${{ inputs.stride }}
+          STRIDE: ${{ inputs.stride || '2' }}
         run: |
           set -euo pipefail
           case "$MODE" in
@@ -72,7 +85,7 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false # one unavailable day must not cancel the rest
-      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      max-parallel: ${{ fromJSON(inputs.max_parallel || '6') }}
       matrix:
         day: ${{ fromJSON(needs.plan.outputs.days) }}
     env:

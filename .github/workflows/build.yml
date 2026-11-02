@@ -6,9 +6,17 @@
 # Outputs go to the bucket only: grid/<window_end>/ if validation passed (the Eavesdrop loader
 # reads the newest there), grid-failed/<window_end>/ if not. No artifacts, no release assets.
 # The log is public, so validate_grid runs with --summary-only.
+#
+# Scheduled: 03:00 UTC on the 25th, a day after extract.yml has pulled the new days, so the
+# Eavesdrop loader picks the build up on the 1st (it marks a month done even when the build is
+# unchanged, so a build after the 1st would wait a month). A scheduled run has no inputs: it
+# builds mode grid at stride 2 against the 2026-09 pilot, which stays valid while
+# BUILDER_VERSION and the stride are unchanged. Change the MONTH default after a new pilot.
 name: build
 
 on:
+  schedule:
+    - cron: "0 3 25 * *"
   workflow_dispatch:
     inputs:
       mode:
@@ -31,6 +39,7 @@ on:
 
 permissions:
   contents: read
+  actions: write # the keepalive step re-enables this workflow
 
 concurrency:
   group: build
@@ -41,16 +50,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
-      MODE: ${{ inputs.mode }}
-      MONTH: ${{ inputs.month }}
-      STRIDE: ${{ inputs.stride }}
-      WORKERS: ${{ inputs.workers }}
+      MODE: ${{ inputs.mode || 'grid' }}
+      MONTH: ${{ inputs.month || '2026-09' }}
+      STRIDE: ${{ inputs.stride || '2' }}
+      WORKERS: ${{ inputs.workers || '2' }}
       FLIGHT_GRID_S3_ENDPOINT: ${{ secrets.FLIGHT_GRID_S3_ENDPOINT }}
       FLIGHT_GRID_S3_ACCESS_KEY_ID: ${{ secrets.FLIGHT_GRID_S3_ACCESS_KEY_ID }}
       FLIGHT_GRID_S3_SECRET_ACCESS_KEY: ${{ secrets.FLIGHT_GRID_S3_SECRET_ACCESS_KEY }}
       FLIGHT_GRID_S3_REGION: ${{ secrets.FLIGHT_GRID_S3_REGION }}
       FLIGHT_GRID_S3_BUCKET: ${{ secrets.FLIGHT_GRID_S3_BUCKET }}
     steps:
+      - name: Keep the schedule alive
+        # GitHub disables schedules in a public repo after 60 days without commits.
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable build.yml -R "$GITHUB_REPOSITORY" || echo "::warning::could not re-enable the build schedule"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
@@ -71,7 +86,7 @@ jobs:
           uv run python merge_manifests.py out/extract/manifests out/days_manifest.json
 
       - name: Pilot, sampled vs full
-        if: inputs.mode == 'pilot'
+        if: env.MODE == 'pilot'
         run: |
           set +e
           uv run python sample_check.py --month "$MONTH" --stride "$STRIDE" --extract-dir out/extract --work out/pilot --workers "$WORKERS"
@@ -81,14 +96,14 @@ jobs:
           exit $status
 
       - name: Build grid
-        if: inputs.mode == 'grid'
+        if: env.MODE == 'grid'
         run: uv run python build_grid.py --extract-dir out/extract --out out/grid --cache out/agg --day-stride "$STRIDE" --workers "$WORKERS"
       - name: Fetch the pilot sampling check
-        if: inputs.mode == 'grid' && inputs.stride != '1'
+        if: env.MODE == 'grid' && env.STRIDE != '1'
         run: uv run python store.py get "pilot/${MONTH}/sampling_check.json" out/pilot/sampling_check.json || echo "no pilot check found for ${MONTH}; validation will fail the sampling gate"
       - name: Validate
         id: validate
-        if: inputs.mode == 'grid'
+        if: env.MODE == 'grid'
         run: |
           set +e
           grid=$(ls -d out/grid/*/ | tail -1)
@@ -100,7 +115,7 @@ jobs:
           echo "window_end=$(basename "$grid")" >> "$GITHUB_OUTPUT"
           echo "dir=$grid" >> "$GITHUB_OUTPUT"
       - name: Publish to private storage
-        if: inputs.mode == 'grid'
+        if: env.MODE == 'grid'
         env:
           STATUS: ${{ steps.validate.outputs.status }}
           WINDOW_END: ${{ steps.validate.outputs.window_end }}
